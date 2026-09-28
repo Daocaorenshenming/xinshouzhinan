@@ -1,0 +1,19 @@
+{
+  // Cloudflare Workers Git 集成部署配置
+  // 配合构建命令 `npx quartz build`（产物输出到 ./public）
+  // 部署命令 `npx wrangler deploy` 读取本文件上传静态资产 + Worker
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "xinshouzhinan",
+  "compatibility_date": "2025-09-01",
+  "main": "worker.js",
+  "assets": {
+    // Quartz 构建产物目录（构建命令生成）
+    "directory": "./public",
+    // Worker 里可用 env.ASSETS 兜底取静态文件
+    "binding": "ASSETS",
+    // 未命中路径返回 public/404.html（Quartz 生成）
+    "not_found_handling": "404-page",
+    // 只有 /api/* 需要 JS 处理（AI 问答）；静态资产直接由 CDN 服务，不进 Worker
+    "run_worker_first": ["/api/*"]
+  }
+}
