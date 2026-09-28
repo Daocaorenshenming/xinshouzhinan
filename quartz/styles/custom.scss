@@ -22,7 +22,7 @@ article {
     margin-bottom: 0.9rem;
   }
 
-  // 中文标题不需要过大的字距
+  // 中文标题不需要过大的字距；收紧标题之间、标题与正文的间距
   h1,
   h2,
   h3,
@@ -31,7 +31,8 @@ article {
   h6 {
     letter-spacing: 0;
     line-height: 1.4;
-    margin-top: 2rem;
+    margin-top: 1.25rem;
+    margin-bottom: 0.45rem;
   }
 
   // 列表项间距，避免中文挤在一起
@@ -552,7 +553,7 @@ html {
     h1,
     h2,
     h3 {
-      margin-top: 1.5rem;
+      margin-top: 1rem;
     }
   }
 }

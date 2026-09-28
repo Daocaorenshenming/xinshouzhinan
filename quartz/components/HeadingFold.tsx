@@ -79,6 +79,26 @@ article .hf-body.collapsed > .hf-inner {
   visibility: hidden;
   transition: visibility 0s 0.3s;
 }
+
+/* ============ 层级缩进（标题下方内容按层级缩进，与标题首字对齐）============
+   缩进量 = 箭头宽(1em×标题字号) + 箭头右边距(0.45em×标题字号)，
+   按主题各标题字号折算 rem；嵌套包裹结构使缩进逐级自然累加 */
+article h1.hf-heading + .hf-body > .hf-inner {
+  padding-left: 2.54rem; /* 1.45 × 1.75rem */
+}
+article h2.hf-heading + .hf-body > .hf-inner {
+  padding-left: 2.03rem; /* 1.45 × 1.4rem */
+}
+article h3.hf-heading + .hf-body > .hf-inner {
+  padding-left: 1.62rem; /* 1.45 × 1.12rem */
+}
+article :is(h4, h5, h6).hf-heading + .hf-body > .hf-inner {
+  padding-left: 1.45rem; /* 1.45 × 1rem */
+}
+
+/* ============ 收紧标题间距 ============
+   已移至 custom.scss 的 article 排版块（层外样式才能压过层内 custom 规则，
+   组件 CSS 在 @layer 内会被 custom.scss 的 margin-top: 2rem 无条件覆盖） */
 `
 
   HeadingFoldComponent.afterDOMLoaded = `
