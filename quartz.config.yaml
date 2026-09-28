@@ -159,6 +159,10 @@ plugins:
       priority: 10
   - source: "@quartz-community/content-meta"
     enabled: true
+    options:
+      # 只保留日期，隐藏「3分钟阅读」——插件原生配置项，无需 CSS hack
+      showReadingTime: false
+      showComma: false
     layout:
       position: beforeBody
       priority: 20
@@ -168,7 +172,7 @@ plugins:
       position: beforeBody
       priority: 30
   - source: "@quartz-community/page-title"
-    enabled: true
+    enabled: false
     layout:
       position: left
       priority: 10
@@ -207,10 +211,10 @@ plugins:
       position: footer
       priority: 50
   - source: "@quartz-community/recent-notes"
-    enabled: true
+    enabled: false
     layout:
-      position: right
-      priority: 60
+      position: left
+      priority: 15
   - source: "@quartz-community/spacer"
     enabled: true
     options: {}

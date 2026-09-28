@@ -1,10 +1,38 @@
+@use "../../styles/variables.scss" as *;
+
 /* ============ AI 问答组件样式 ============ */
+// 定位策略：锚定「正文列的右下角」，而非视口右下角。
+//
+// 目的：无论窗口如何缩放，按钮始终贴在正文区域右边缘 / 底部，
+// 不会被右侧栏推挤、也不会在超宽屏上飘到远离正文的角落。
+//
+// 实现：正文列（.center）宽度 = min(视口, 1500px) - 左右侧栏 320px。
+// 侧栏已改为 fixed，故用同样的算式推导正文右边缘的可视位置：
+//   right = 侧栏宽(320px) + 正文与侧栏间距(0.5rem) + 离正文边缘留白(1.5rem)
+// 视口不足 1500px 时不需要额外偏移（侧栏此时已被媒体查询收成 static/隐藏）。
 .ai-chat {
   position: fixed;
-  right: 1.5rem;
-  bottom: 1.5rem;
+  right: var(--ai-chat-right, 1.5rem);
+  bottom: var(--ai-chat-bottom, 1.5rem);
   z-index: 999;
   font-family: var(--bodyFont);
+}
+
+/* 桌面端：把按钮推到正文列内側右边缘 */
+@media all and ($desktop) {
+  .ai-chat {
+    // 右侧占位列固定 320px（= 侧栏宽度，侧栏恒定贴窗口右缘），
+    // 再加 0.5rem 网格间距与 1.5rem 留白，即为按钮右对齐正文内的位置。
+    // 不随视口变化 —— 与 custom.scss 的 grid-template-columns: 320px ... 320px 一致。
+    --ai-chat-right: calc(320px + 0.5rem + 1.5rem);
+  }
+}
+
+/* 平板端：只有左栏，右侧无侧栏，贴回视口边缘 */
+@media all and ($tablet) {
+  .ai-chat {
+    --ai-chat-right: 1.5rem;
+  }
 }
 
 .ai-chat[hidden],
@@ -45,8 +73,8 @@
 /* ---------- 面板 ---------- */
 .ai-chat-panel {
   position: fixed;
-  right: 1.5rem;
-  bottom: 1.5rem;
+  right: var(--ai-chat-right, 1.5rem);
+  bottom: var(--ai-chat-bottom, 1.5rem);
   width: 400px;
   max-width: calc(100vw - 2rem);
   height: 560px;
@@ -300,8 +328,8 @@
 /* ---------- 移动端适配 ---------- */
 @media all and (max-width: 800px) {
   .ai-chat {
-    right: 1rem;
-    bottom: 1rem;
+    --ai-chat-right: 1rem;
+    --ai-chat-bottom: 1rem;
   }
 
   .ai-chat-toggle span {

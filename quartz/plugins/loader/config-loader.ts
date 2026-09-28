@@ -497,6 +497,8 @@ export async function loadQuartzConfig(
     builtinPlugins.ComponentResources(),
     builtinPlugins.Assets(),
     builtinPlugins.Static(),
+    // 项目根 img/ → 产物 /img/（banner 等图片资源）
+    builtinPlugins.ProjectImages(),
   ]
   const builtinPageTypes = [builtinPlugins.PageTypes.NotFoundPageType()]
 
@@ -505,6 +507,24 @@ export async function loadQuartzConfig(
     filters: await instantiate(filters, "filter"),
     emitters: [...builtinEmitters, ...(await instantiate(emitters, "emitter"))],
     pageTypes: [...(await instantiate(pageTypes, "pageType")), ...builtinPageTypes],
+  }
+
+  // 为所有 pageType 挂载站点级 treeTransforms。
+  // 这些 transform 在 renderTranscludes() 之后执行，因此能拿到已展开的
+  // Obsidian 图片嵌入（![[...]]）—— Banner 组件据此提取文章头图。
+  const { getSiteTreeTransforms } = await import("./tree-transforms")
+  const siteTreeTransforms = getSiteTreeTransforms()
+  if (siteTreeTransforms.length > 0) {
+    for (const pt of plugins.pageTypes as unknown as {
+      name: string
+      treeTransforms?: (ctx: unknown) => unknown[]
+    }[]) {
+      const existing = pt.treeTransforms
+      pt.treeTransforms = (ctx: unknown) => [
+        ...(existing ? (existing(ctx) as unknown[]) : []),
+        ...siteTreeTransforms,
+      ]
+    }
   }
 
   // Load layout and add PageTypeDispatcher to emitters.
@@ -731,6 +751,63 @@ export async function loadQuartzLayout(layoutOverrides?: {
           pt[pos] = [...((pt[pos] as unknown[]) ?? []), ...injected]
         }
       }
+    }
+  }
+
+  // 追加式插槽注入（appendLeft / appendHeader / appendRight）。
+  // 与 defaults 同理：需要同时写入每个 pageType 的显式数组，
+  // 否则会被 config.yaml 生成的空数组遮蔽。
+  const appendSlots: [("appendLeft" | "appendHeader" | "appendRight"), "left" | "header" | "right"][] =
+    [
+      ["appendLeft", "left"],
+      ["appendHeader", "header"],
+      ["appendRight", "right"],
+    ]
+  for (const [overrideKey, slot] of appendSlots) {
+    const injected = layoutOverrides?.[overrideKey]
+    if (!Array.isArray(injected) || injected.length === 0) continue
+
+    // 默认布局（无 pageType 覆写时使用）
+    const defaultSlot = (mergedDefaults as Record<string, unknown>)[slot]
+    ;(mergedDefaults as Record<string, unknown>)[slot] = [
+      ...((defaultSlot as unknown[]) ?? []),
+      ...injected,
+    ]
+
+    // 每个 pageType 的显式数组
+    for (const pageType of Object.keys(mergedByPageType)) {
+      const pt = mergedByPageType[pageType] as Record<string, unknown>
+      const existing = pt[slot]
+      // 只有已存在显式数组（含空数组）时才需要补写，
+      // 否则 resolveLayout 会自动回落到 sharedDefaults
+      if (Array.isArray(existing)) {
+        pt[slot] = [...existing, ...injected]
+      } else {
+        pt[slot] = injected
+      }
+    }
+  }
+
+  // 前置式插槽注入（prependLeft / prependHeader）。
+  // 用于把组件放到插槽最前面（例如「导航」标题要排在「探索」之上）。
+  const prependSlots: [("prependLeft" | "prependHeader"), "left" | "header"][] = [
+    ["prependLeft", "left"],
+    ["prependHeader", "header"],
+  ]
+  for (const [overrideKey, slot] of prependSlots) {
+    const injected = layoutOverrides?.[overrideKey]
+    if (!Array.isArray(injected) || injected.length === 0) continue
+
+    const defaultSlot = (mergedDefaults as Record<string, unknown>)[slot]
+    ;(mergedDefaults as Record<string, unknown>)[slot] = [
+      ...injected,
+      ...((defaultSlot as unknown[]) ?? []),
+    ]
+
+    for (const pageType of Object.keys(mergedByPageType)) {
+      const pt = mergedByPageType[pageType] as Record<string, unknown>
+      const existing = pt[slot]
+      pt[slot] = [...injected, ...(Array.isArray(existing) ? existing : [])]
     }
   }
 

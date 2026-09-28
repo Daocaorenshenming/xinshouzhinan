@@ -1,13 +1,32 @@
 @charset "UTF-8";
+/**
+ * Layout breakpoints
+ * $mobile: screen width below this value will use mobile styles
+ * $desktop: screen width above this value will use desktop styles
+ * Screen width between $mobile and $desktop width will use the tablet layout.
+ * assuming mobile < desktop
+ */
 /* ============ AI 问答组件样式 ============ */
 .ai-chat {
   position: fixed;
-  right: 1.5rem;
-  bottom: 1.5rem;
+  right: var(--ai-chat-right, 1.5rem);
+  bottom: var(--ai-chat-bottom, 1.5rem);
   z-index: 999;
   font-family: var(--bodyFont);
 }
 
+/* 桌面端：把按钮推到正文列内側右边缘 */
+@media all and ((min-width: 1200px)) {
+  .ai-chat {
+    --ai-chat-right: calc(320px + 0.5rem + 1.5rem);
+  }
+}
+/* 平板端：只有左栏，右侧无侧栏，贴回视口边缘 */
+@media all and ((min-width: 800px) and (max-width: 1200px)) {
+  .ai-chat {
+    --ai-chat-right: 1.5rem;
+  }
+}
 .ai-chat[hidden],
 .ai-chat-panel[hidden] {
   display: none !important;
@@ -43,8 +62,8 @@
 /* ---------- 面板 ---------- */
 .ai-chat-panel {
   position: fixed;
-  right: 1.5rem;
-  bottom: 1.5rem;
+  right: var(--ai-chat-right, 1.5rem);
+  bottom: var(--ai-chat-bottom, 1.5rem);
   width: 400px;
   max-width: calc(100vw - 2rem);
   height: 560px;
@@ -281,8 +300,8 @@
 /* ---------- 移动端适配 ---------- */
 @media all and (max-width: 800px) {
   .ai-chat {
-    right: 1rem;
-    bottom: 1rem;
+    --ai-chat-right: 1rem;
+    --ai-chat-bottom: 1rem;
   }
   .ai-chat-toggle span {
     display: none;

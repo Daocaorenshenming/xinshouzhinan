@@ -1,5 +1,14 @@
 @use "./variables.scss" as *;
 
+// ═══════════════════════════════════════════════════════════════
+// 布局常量
+// ═══════════════════════════════════════════════════════════════
+// 内容区最大宽度，与 base.scss 的 `.page { max-width: desktop(1200px) + 300px }`
+// 保持一致（1500px）。侧栏居中定位需要用它换算「外侧空白区」宽度。
+$contentMax: 1500px;
+// 侧栏宽度，与 sidebar-fixed-metrics 的 width 及 grid 占位列一致。
+$sidebarWidth: 320px;
+
 /* ============ 中文排版优化 ============ */
 article {
   // 中文正文行高与字距（中文字体在大字号下需要更宽松的排版）
@@ -120,6 +129,419 @@ article img {
   border-radius: 6px;
   max-width: 100%;
   height: auto;
+}
+
+/* ============ 顶部 Banner ============ */
+// 由 quartz/components/Banner.tsx 渲染，注入到 header 插槽。
+//
+// 定位策略：header 在中间内容列内部，若参与 CSS Grid 布局就会与左右侧栏
+// 抢空间（曾导致左侧栏「导航/探索」被覆盖）。因此把 banner 完全移出布局流。
+//
+// 通栏实现（关键）：不能用 100vw —— 该值包含纵向滚动条宽度，有滚动条时
+// 会横向溢出、且窗口尺寸变化时容易露白边。改用 calc(-50vw + 50%) 这个
+// 经典技巧：无论父容器多宽，都能精准顶到视口左右两边缘。
+//
+//  - .site-banner     占位块，撑开页面顶部的留白（高度 = --banner-height）
+//  - .banner-bg       绝对定位，通栏铺满整个视口宽度，承载背景图
+//  - .banner-content  内容层，居中并限制阅读宽度
+//
+// 注意：banner 必须处于「通栏」状态 —— 左右无圆角、无外边距、无最大宽度限制。
+
+.site-banner {
+  --banner-height: 300px;
+  --banner-image: none;
+  position: relative;
+  // 通栏：撑满父容器宽度（父级为中间列，由 .banner-bg 负责突破到视口边缘）
+  width: 100%;
+  height: var(--banner-height);
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  // 兜底：即使图片未加载也保持主题色块，不出现空白
+  background-color: color-mix(in srgb, var(--secondary) 10%, var(--light));
+  // 通栏视觉：不留圆角
+  border-radius: 0;
+  overflow: visible;
+}
+
+.site-banner .banner-bg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  // ⚠️ 通栏实现（两套机制配合，缺一不可）：
+  //
+  // 1) banner-bg 本体用经典 breakout：
+  //    width:100vw + left:50% + margin-left:-50vw，把自己拉到视口全宽。
+  //    父级 .site-banner 位于中间列（列在视口中水平居中），因此该写法
+  //    恰好让 banner 左右缘对齐视口左右缘。
+  //    （不能直接 width:100% —— 那只等于中间列宽，截图实测 598px 不通栏。）
+  //
+  // 2) 滚动条修正由 html { width:100% }（见下方全局区）承担：
+  //    100vw 含滚动条宽度（实测 10px），banner 会左右各溢出 ~5px，
+  //    但 html 的 overflow-x:hidden（base.scss 自带）会裁掉这部分，
+  //    且背景图 cover 居中裁剪，视觉完全无感。
+  //    关键是 html 不再是 100vw，grid 布局基准与可视区一致，
+  //    不会出现「右栏压正文」的位移问题。
+  width: 100vw;
+  left: 50%;
+  margin-left: -50vw;
+  background-image: var(--banner-image);
+  // 定高 + 宽度自适应 → 图片用 cover 自动拉伸裁剪填满
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: var(--secondary);
+  z-index: 0;
+}
+
+// 注意：不叠加任何渐变 / 遮罩层 —— banner 需要 100% 还原原图色彩。
+// 若日后确实需要压暗以提升文字可读性，请用 background-blend-mode 或
+// background-image 的多层写法，不要新增 ::after，避免污染原图颜色。
+
+// 内容层：居中，限制阅读宽度（日后放标题用）
+.site-banner .banner-content {
+  position: absolute;
+  inset: 0;
+  margin: 0 auto;
+  padding: 0 2rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
+// 被提升为 banner 的正文头图：隐藏，避免重复展示
+article img.banner-lifted-image {
+  display: none;
+}
+
+/* ============ 左右侧栏：banner 下方 + 不随正文滚动 + 恒定贴窗口边缘 ============ */
+// 目标：
+//   1) banner 下方 —— 侧栏起点是 300px（banner 高度），而不是 top: 0
+//   2) 不随滚动  —— 从 sticky 改为 fixed，脱离文档流，滚动时原地不动
+//   3) 恒定贴边  —— 左侧栏永远贴住窗口最左侧（left: 0），
+//                    右侧栏永远贴住窗口最右侧（right: 0）；
+//                    宽度固定 320px，垂直位置（top / height）不随视口变化。
+//
+// 关键点：侧栏由 CSS Grid 的 grid-sidebar-left / grid-sidebar-right 占位，
+// 一旦改成 position: fixed 就脱离文档流，导致 grid 的两列塌陷成 0 宽、
+// 中间正文列被撑到 max-width 上限（视觉上正文跑到屏幕最左边）。
+// 因此必须同时用 grid-template-columns 把左右两列重新钉回 320px。
+//
+// ⚠️ 历史教训（避免再次走弯路）：
+//   曾把需求理解为「侧栏向外移开、腾空间给正文」，用 $sidebarOutward / shift
+//   做了一套随视口变化的位移公式。但需求本质是「侧栏恒定贴住窗口边缘」——
+//   fixed 定位下 left:0 / right:0 本身就是恒贴边的最简解，任何随视口变化的
+//   位移量（min/max 嵌套）都只会让侧栏在部分视口区间脱离边缘或压住正文。
+//   现在直接钉 0，零视口依赖，行为完全确定。
+//
+// 侧栏宽度保持 320px，与 grid 占位列同宽，正文不会被遮挡。
+
+@mixin sidebar-fixed-metrics {
+  // 与 banner 通栏同高，侧栏从 banner 下沿开始（垂直位置恒定，不随视口变化）
+  top: var(--sidebar-top, 300px);
+  height: calc(100vh - var(--sidebar-top, 300px));
+  // ⚠️ fixed 元素不受 grid 列宽约束，会按内容收缩/撑开
+  // （实测左栏被最近笔记的长标题撑到 367px、右栏缩到 198px），
+  // 必须显式钉回 320px，与 grid-template-columns 一致，
+  // 否则会压到正文或左右不对称。
+  width: 320px;
+  padding: 1.5rem 0 2rem 0;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: hidden;
+  // 隐藏侧栏自身滚动条（内容不多，视觉更干净）
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media all and ($desktop) {
+  // banner 之外不再需要顶部 $topSpacing，
+  // 由 banner 自身的高度承担留白，避免出现双重空白
+  .page > #quartz-body > .center > .page-header {
+    margin-top: 0;
+  }
+
+  .page > #quartz-body > .center > .page-header > header {
+    margin-bottom: 0;
+  }
+
+  .page > #quartz-body {
+    // fixed 会让左右列脱离 grid 流，这里显式重新占位。
+    // 列宽固定 320px = 侧栏宽度 ⇒ 正文列从「左栏内侧」延伸到「右栏内侧」，
+    // 与贴边的侧栏严丝合缝。
+    //
+    // ⚠️ width: 100% 覆盖 Quartz 默认的 100vw：
+    //   banner 的通栏背景 .banner-bg 依赖 #quartz-body 的宽度铺满视觉通栏，
+    //   而 Quartz 默认用 100vw —— 100vw **包含垂直滚动条宽度**（实测 10px）。
+    //   于是容器比可视区宽 10px，3 列 grid（320+608+320+2×gap）撑破容器
+    //   产生横向滚动条，正文被整体右推、右栏贴边后正好压住正文边缘。
+    //   改用 100%（= 初始包含块可视宽度，不含滚动条）后容器与可视区等宽，
+    //   网格恰好分配，无横向滚动。
+    //
+    // ⚠️ 中间列必须用 minmax(0, 1fr) 而不是 auto：
+    //   banner 的通栏背景 .banner-bg 用 width:100vw 铺满视口，而它位于
+    //   .center 内部 —— auto 列会被这个「超宽子元素」的 scrollWidth 撑大，
+    //   导致不同文章切换时正文列宽来回跳变（实测 center 宽 608 但
+    //   scrollWidth 达 933）。minmax(0,1fr) 让列宽只由网格分配决定，
+    //   完全无视内部溢出，正文宽度因此恒定。
+    width: 100%;
+    grid-template-columns: 320px minmax(0, 1fr) 320px;
+    // banner 需要真正顶到页面顶端，去掉 row-gap 造成的 5px 缝隙
+    row-gap: 0;
+  }
+
+  .page > #quartz-body > .center {
+    // ⚠️ 关键：侧栏一旦变成 fixed 就脱离文档流，grid 的自动布局会把
+    // .center 回填到第 1 列（grid-sidebar-left）而不是中间列。
+    // Quartz 默认只给 .center > article 设了 grid-area，.center 自身
+    // 依赖「侧栏占位」才能被推到中列 —— 所以这里必须显式钉住中列。
+    grid-area: grid-center;
+    // ⚠️ 不要设 min-width: 0！base.scss 对 .center 有 margin:auto +
+    // min-width:100%（同特异性，谁后谁赢）。一旦 min-width 归零，
+    // 窄内容页面（如文件夹页，max-content 仅 ~168px）会收缩居中，
+    // 导致切换文章时正文宽度跳变。中间列的溢出防护已由上面的
+    // minmax(0,1fr) 承担，此处保持 100%。
+    min-width: 100%;
+  }
+
+  .page > #quartz-body > .sidebar {
+    position: fixed;
+    z-index: 20;
+    @include sidebar-fixed-metrics;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // 侧栏定位：中轴对齐「外侧空白区」中线
+  // ═══════════════════════════════════════════════════════════════
+  // 几何模型（视口宽 V，内容区最大宽 C = 1500px，侧栏宽 S = 320px）：
+  //   内容区宽度   pageW    = min(V, C)
+  //   单侧空白宽   gap      = (V - pageW) / 2
+  //   空白区中轴   gapCx    = gap / 2
+  //   侧栏中心     sideCx   = left + S / 2
+  //
+  //   令 sideCx = gapCx  ⇒  left = gap/2 - S/2 = (V - C) / 4 - S / 2
+  //   这正是下面两行表达式的来源（/4 即 gap/2 再 /2）。
+  //
+  // 两个边界条件的处理：
+  //   1) 下界（空白不足）：gap < S 时 left 会算成负数 → 侧栏探出视口左缘。
+  //      用 max(0px, …) 夹住 ⇒ 侧栏改为**贴住视口边缘**（left:0）。
+  //      实测阈值：V ≥ 2200px 时 gap ≥ 320，才开始真正居中；
+  //                V ∈ [1500, 2200) 区间侧栏贴边 —— 这是「320px 侧栏放不进
+  //                更窄空白区」的物理约束，非计算错误。
+  //   2) 上界（不压正文）：left ≤ gap 恒成立（因 left = gap/2 - S/2 < gap），
+  //      故侧栏右缘 (left + S) 永远 ≤ 正文左缘 (gap + S)，不会遮挡正文。
+  //
+  // ⚠️ 用 100vw 而非 100%：.page 是 max-width:1500px 的居中块，
+  //   在它内部取 100% 得到的是 1500px 而非视口宽，无法感知外侧空白。
+  //   100vw 的滚动条误差（约 10px）仅使居中位置偏移几个像素，
+  //   且被 max() 夹住不会溢出，可接受。
+  //
+  // 关联：阅读模式（reader-mode=on）会把侧栏 opacity 归零，默认开启，
+  //      见 ReaderModeDefault.tsx —— 侧栏平时隐去，hover 或关闭阅读模式时显现。
+  .page > #quartz-body > .sidebar.left {
+    left: max(0px, (100vw - #{$contentMax}) / 4 - #{$sidebarWidth} / 2);
+  }
+
+  .page > #quartz-body > .sidebar.right {
+    right: max(0px, (100vw - #{$contentMax}) / 4 - #{$sidebarWidth} / 2);
+    margin-right: 0;
+  }
+
+  // 左右列内元素同步贴边（Quartz 侧栏内部有默认 2rem 缩进）
+  .page > #quartz-body > .sidebar.left > *,
+  .page > #quartz-body > .sidebar.right > * {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    box-sizing: border-box;
+  }
+}
+
+// 平板：只有左栏，且不固定（避免遮挡正文）
+@media all and ($tablet) {
+  .page > #quartz-body > .sidebar {
+    position: static;
+    height: auto;
+    overflow-y: visible;
+  }
+}
+
+// 平板 / 手机：矮一些，避免挤占首屏
+@media all and not ($desktop) {
+  .site-banner {
+    --banner-height: 200px;
+  }
+}
+
+/* ============ 全局：消除 100vw 引起的横向溢出 ============ */
+// Quartz 官方 base.scss 给 html 设了 `width: 100vw`。
+// ⚠️ 100vw **包含垂直滚动条宽度**（本机实测 10px），一旦页面出现纵向滚动条
+// （正文较长的文章必然出现），html 就比可视区宽 10px：
+//   → 产生横向滚动条；
+//   → 3 列 grid（320 + 1fr + 320）按 1258px 分配，正文整体右移；
+//   → 右侧栏虽 right:0 仍贴边，但左缘会压住正文右缘 5px。
+// 改用 100%（= 初始包含块可视宽度，不含滚动条），布局基准与可视区一致。
+// 只覆盖 width，不动官方其它规则（overflow-x:hidden 等保留）。
+html {
+  width: 100%;
+}
+
+/* ============ 隐藏 note-properties 面板（摘要） ============ */
+// 该面板展示 frontmatter 的 description（渲染成「description + 摘要正文」表格）。
+// 需求：整个面板隐藏 —— 包括标题行（Properties / 数量）与属性表格两部分。
+//
+// 为什么用 CSS 而不是插件配置：
+//   note-properties 只有 hidePropertiesView 一个相关开关，它同样会隐藏
+//   整个面板，但会在 DOM 里留下空容器占位。CSS 直接 display:none 更干净，
+//   且不影响其他页面类型的布局计算。
+//
+// 顺带说明：summary 是 <details> 的折叠入口。整个面板都隐藏后折叠交互
+// 已无意义，故一并停用（不会留下可点但无反馈的死元素）。
+
+.note-properties.metadata-container {
+  display: none !important;
+}
+
+// 双保险：即使插件结构变化（表格不再包在 .metadata-container 里），
+// 也把标题行与表格分别隐藏
+.note-properties > summary.note-properties-header,
+.note-properties > .note-properties-table {
+  display: none !important;
+}
+
+/* ============ 隐藏正文时间 content-meta ============ */
+// content-meta 渲染发布日期（可含阅读时间，已在 quartz.config.yaml 关掉）。
+// 需求：整条隐藏，正文直接从标题开始。
+//
+// 与 note-properties 一样优先用插件配置（showReadingTime: false 已生效），
+// 但「整条不显示」没有对应开关，故用 CSS 收口。
+
+.content-meta {
+  display: none !important;
+}
+
+/* ============ 左侧栏「最近的笔记」（可折叠 + 标题对齐「探索」）============ */
+// 标题要与「探索」完全一致。实测两者差异：
+//            探索(h2)        最近的笔记(h3, 原)
+//   size     16px = 1rem     13.6px = 0.85rem
+//   weight   700             600
+//   color    --dark          --gray
+// 这里把标题统一到探索的取值。
+//
+// 折叠交互由 CollapsibleRecentNotes.tsx 负责（类名 collapsed + aria-expanded），
+// 视觉部分（chevron 旋转、内容收起）在这里统一控制。
+.left.sidebar .recent-notes {
+  font-size: 0.8rem;
+
+  // 折叠按钮：去掉浏览器默认按钮样式，让它表现为一行可点的标题
+  > .recent-notes-toggle {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 0;
+    margin: 0 0 0.4rem 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    color: var(--dark);
+    font-family: inherit;
+
+    &:hover > h3 {
+      color: var(--tertiary);
+    }
+
+    // 标题与「探索」h2 取值对齐
+    > h3 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: $boldWeight;
+      line-height: 1.5rem;
+      color: var(--dark);
+      letter-spacing: 0;
+      transition: color 0.15s ease;
+    }
+
+    // chevron：与探索同款（20×20，stroke-width 2）
+    > .fold {
+      margin-left: 0.5rem;
+      opacity: 0.8;
+      flex-shrink: 0;
+      transition: transform 0.3s ease;
+    }
+  }
+
+  // 收起时 chevron 旋转 -90°，与探索一致
+  &.collapsed > .recent-notes-toggle > .fold {
+    transform: rotateZ(-90deg);
+  }
+
+  // 折叠内容区：用 grid-template-rows 做丝滑高度动画（比 max-height 精确）
+  > .recent-notes-content {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 0.3s ease, visibility 0.3s ease;
+    visibility: visible;
+  }
+
+  &.collapsed > .recent-notes-content {
+    grid-template-rows: 0fr;
+    visibility: collapse;
+  }
+
+  // 里面的列表再包一层，给 grid 动画留出可裁剪容器
+  > .recent-notes-content > * {
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  // 官方 RecentNotes 组件内部还会渲染一个 <h3>最近的笔记</h3> 标题，
+  // 与折叠外壳的标题重复 —— 隐藏内部标题，只保留外壳的（样式与探索一致）
+  .recent-notes-content > .recent-notes > h3 {
+    display: none;
+  }
+
+  // 列表条目（原样式保留，字号已缩小）
+  .recent-notes ul.recent-ul {
+    margin-top: 0.3rem;
+
+    > li {
+      margin: 0.5rem 0;
+
+      .section > .desc > h3 {
+        margin: 0;
+        font-size: 0.82rem;
+        font-weight: $normalWeight;
+        line-height: 1.5;
+
+        > a {
+          background-color: transparent;
+          // 长标题折行而不是撑破侧栏
+          overflow-wrap: anywhere;
+        }
+      }
+
+      .section > .meta {
+        margin: 0.1rem 0 0 0;
+        font-size: 0.72rem;
+        opacity: 0.55;
+      }
+
+      // 侧栏空间有限，隐藏标签
+      .section > ul.tags {
+        display: none;
+      }
+    }
+  }
 }
 
 /* ============ 响应式 ============ */
