@@ -4,20 +4,28 @@
 在 `quartz.config.yaml` 中以 `source: ./local-plugins/graph` 引用，
 构建时由插件加载器以 symlink 方式链接到 `.quartz/plugins/graph`。
 
-## 定制需求
+## 定制需求（v2，2026-09-28）
 
-1. **节点标签始终显示**（原版：hover 才显示，或 zoom 放大到一定程度才渐显）
-2. **hover 某节点时，显示其关联节点的名称**（原版：hover 只放大/显示被 hover 节点自己的标签）
+1. **当前页面的节点文字永远显示**（局部图/全局图中的当前页节点）
+2. **hover 某节点时：只显示被 hover 节点 + 1 步邻居（直接相连）的文字，其他节点文字隐藏**
+3. 非 hover 状态下放大图谱（zoom in）时，其余标签按原版逻辑渐显（便于浏览全图）
 
-## 改动明细（全部位于 `dist/index.js` 的内联渲染脚本）
+## 改动明细（全部位于 `dist/index.js` 与 `dist/components/index.js` 的内联渲染脚本）
+
+> 注意：两份文件是重复打包产物，**组件实际从 `./components` 子路径加载**，补丁必须两边同步打。
 
 | # | 原代码 | 改为 | 作用 |
 |---|--------|------|------|
-| A | `Du.anchor.set(.5,1.2),Du.alpha=0,` | `Du.alpha=1,` | 节点标签创建时直接可见（原为 alpha=0 隐藏）|
-| B | `_u===v.simulationData.id?(v.label.alpha=1,v.label.scale.set(l)):v.label.scale.set(i)}` | `...(v.label.scale.set(i),v.label.alpha=_u===null?1:v.active?1:.55)}` | hover 逻辑：被 hover 节点高亮放大；**关联节点（active）标签 alpha=1**（显示关联名称）；无 hover 时全部恢复 alpha=1；与当前 hover 无关节点淡化至 0.55（仍可见）|
-| C | `v.indexOf(T)===-1&&(T.alpha=F)}` | `v.indexOf(T)===-1&&(T.alpha=Math.max(F,.85))}` | zoom 缩小时标签保底 0.85 可见度，不再完全隐藏 |
+| 1a | `for(var k=0;k<ru.length;k++){var iu=ru[k],ae=iu.id,` | 前插 `var $curLabel=null,$curId=we()===""?"/":we();` | `$curId`=当前页 slug。注意：节点 id 经过 `cu()` 规范化，**首页节点的 id 是 `"/"` 而非 `"index"`**（`we()` 对 `/` 返回空串，映射到 `"/"`）|
+| 1b | `Du.anchor.set(.5,1.2),Du.alpha=0,` | `Du.alpha=ae===$curId?($curLabel=Du,1):0,` | 创建标签时：当前页节点 alpha=1（永远显示），其余 alpha=0 |
+| 2 | `...(v.label.alpha=1,v.label.scale.set(l)):v.label.scale.set(i)}` | `:(v.label.scale.set(i),v.label.alpha=_u===null?(v.simulationData.id===$curId?1:0):v.active?1:0)}` | hover 更新：无 hover → 只显示当前页；hover X → X 邻居（active=1 步）显示，其他 0 |
+| 3 | `v.indexOf(T)===-1&&(T.alpha=F)}` | `...&&(T.alpha=_u!==null?(T===$curLabel?1:0):F)}` | zoom 覆盖保护：hover 状态下严格邻域显示（当前页保底 1）；非 hover 保持原版 zoom 渐显 |
 
-变量说明（压缩后代码）：`_u`=当前 hover 节点 id（null=无），`v.active`=是否为 hover 节点的关联节点，`F`=zoom 推导出的标签透明度。
+变量说明（压缩后代码）：`_u`=当前 hover 节点 id（null=无），`v.active`=是否为 hover 节点的 1 步邻居，`F`=zoom 推导的标签透明度，`we()`=当前页 slug。
+
+### v1 → v2 变更记录
+
+v1（标签全显 + hover 淡化 0.55）已废弃。v2 按新需求：常态只显示当前页标签，hover 展示 1 步邻域，其余隐藏。
 
 ## 升级注意
 
