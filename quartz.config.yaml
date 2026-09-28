@@ -134,7 +134,9 @@ plugins:
     layout:
       position: left
       priority: 50
-  - source: "@quartz-community/graph"
+  # 图谱插件使用本地定制副本（local-plugins/graph）：标签常显 + hover 显示关联节点名称
+  # 原始包: @quartz-community/graph@1.0.0，改动见 local-plugins/graph/PATCHES.md
+  - source: ./local-plugins/graph
     enabled: true
     layout:
       position: right
