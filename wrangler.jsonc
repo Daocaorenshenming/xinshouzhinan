@@ -6,6 +6,10 @@
   "name": "xinshouzhinan",
   "compatibility_date": "2025-09-01",
   "main": "worker.js",
+  // 运行时非敏感变量（ZHIPU_API_KEY 属机密，在仪表板「变量和机密」里配置，切勿写入本文件）
+  "vars": {
+    "ZHIPU_MODEL": "glm-4-flash"
+  },
   "assets": {
     // Quartz 构建产物目录（构建命令生成）
     "directory": "./public",
