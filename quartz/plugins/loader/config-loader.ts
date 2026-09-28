@@ -509,7 +509,9 @@ export async function loadQuartzConfig(
 
   // Load layout and add PageTypeDispatcher to emitters.
   // This must happen after plugin instantiation so the component registry is populated.
-  const layout = await loadQuartzLayout()
+  // 用户自定义 overrides（见 layout-overrides.ts）在此统一注入。
+  const { getLayoutOverrides } = await import("./layout-overrides")
+  const layout = await loadQuartzLayout(getLayoutOverrides())
   plugins.emitters.push(
     builtinPlugins.PageTypes.PageTypeDispatcher({
       defaults: layout.defaults,
@@ -714,6 +716,21 @@ export async function loadQuartzLayout(layoutOverrides?: {
   if (layoutOverrides?.byPageType) {
     for (const [pageType, overrideLayout] of Object.entries(layoutOverrides.byPageType)) {
       mergedByPageType[pageType] = { ...mergedByPageType[pageType], ...overrideLayout }
+    }
+  }
+  // config.yaml 的 byPageType 会为每个位置生成显式空数组，
+  // 在 resolveLayout 的 ?? 合并中会遮蔽 defaults。因此把用户注入的
+  // defaults 组件追加到每个 pageType 的对应位置（而非替换）。
+  if (layoutOverrides?.defaults) {
+    const injectable = ["afterBody", "beforeBody", "footer", "header"] as const
+    for (const pageType of Object.keys(mergedByPageType)) {
+      const pt = mergedByPageType[pageType] as Record<string, unknown>
+      for (const pos of injectable) {
+        const injected = layoutOverrides.defaults[pos]
+        if (Array.isArray(injected) && injected.length > 0) {
+          pt[pos] = [...((pt[pos] as unknown[]) ?? []), ...injected]
+        }
+      }
     }
   }
 

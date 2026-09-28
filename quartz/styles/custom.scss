@@ -1,3 +1,156 @@
 @use "./variables.scss" as *;
 
-// put your custom CSS here!
+/* ============ 中文排版优化 ============ */
+article {
+  // 中文正文行高与字距（中文字体在大字号下需要更宽松的排版）
+  line-height: 1.85;
+  letter-spacing: 0.01em;
+  text-align: justify;
+  text-justify: inter-ideograph;
+
+  p {
+    margin-top: 0.9rem;
+    margin-bottom: 0.9rem;
+  }
+
+  // 中文标题不需要过大的字距
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    letter-spacing: 0;
+    line-height: 1.4;
+    margin-top: 2rem;
+  }
+
+  // 列表项间距，避免中文挤在一起
+  li {
+    margin-top: 0.35rem;
+    margin-bottom: 0.35rem;
+    line-height: 1.75;
+  }
+
+  strong {
+    font-weight: $boldWeight;
+  }
+}
+
+/* ============ 折叠段落（vault 中大量使用）============ */
+details {
+  border: 1px solid var(--lightgray);
+  border-left: 3px solid var(--secondary);
+  border-radius: 6px;
+  padding: 0.5rem 0.9rem;
+  margin: 0.9rem 0;
+  background-color: color-mix(in srgb, var(--secondary) 4%, transparent);
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: color-mix(in srgb, var(--secondary) 8%, transparent);
+  }
+
+  summary {
+    cursor: pointer;
+    font-weight: $semiBoldWeight;
+    color: var(--secondary);
+    user-select: none;
+    list-style: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    &::before {
+      content: "▸";
+      display: inline-block;
+      margin-right: 0.5rem;
+      transition: transform 0.2s ease;
+    }
+  }
+
+  &[open] > summary::before {
+    transform: rotate(90deg);
+  }
+}
+
+/* ============ 知识图谱视觉增强 ============ */
+.graph-outer {
+  > .graph-container {
+    border-radius: 8px;
+    border: 1px solid var(--lightgray);
+    overflow: hidden;
+  }
+}
+
+.graph-container canvas {
+  transition: opacity 0.2s ease;
+}
+
+.global-graph-outer {
+  backdrop-filter: blur(6px);
+  background-color: color-mix(in srgb, var(--light) 85%, transparent);
+
+  .global-graph-container {
+    border: 1px solid var(--lightgray);
+    border-radius: 10px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  }
+}
+
+/* ============ 标签样式 ============ */
+.tags {
+  gap: 0.4rem;
+
+  > li > a {
+    border-radius: 4px;
+    font-size: 0.85rem;
+    padding: 0.15rem 0.5rem;
+    transition: all 0.15s ease;
+
+    &:hover {
+      transform: translateY(-1px);
+    }
+  }
+}
+
+/* ============ 图片 ============ */
+article img {
+  border-radius: 6px;
+  max-width: 100%;
+  height: auto;
+}
+
+/* ============ 响应式 ============ */
+@media all and (max-width: 800px) {
+  article {
+    line-height: 1.75;
+
+    h1,
+    h2,
+    h3 {
+      margin-top: 1.5rem;
+    }
+  }
+}
+
+/* ============ 滚动条美化 ============ */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--light);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gray);
+  border-radius: 5px;
+  border: 2px solid var(--light);
+
+  &:hover {
+    background: var(--darkgray);
+  }
+}
