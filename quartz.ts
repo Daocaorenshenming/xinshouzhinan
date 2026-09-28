@@ -5,6 +5,7 @@ import AiChat from "./quartz/components/AiChat"
 import Banner from "./quartz/components/Banner"
 import { bannerTransform } from "./quartz/components/bannerTransform"
 import CollapsibleRecentNotes from "./quartz/components/CollapsibleRecentNotes"
+import HeadingFold from "./quartz/components/HeadingFold"
 import ReaderModeDefault from "./quartz/components/ReaderModeDefault"
 
 // ============================================================================
@@ -51,6 +52,8 @@ registerLayoutOverrides({
     afterBody: [
       AiChat({ apiEndpoint: "/api/ask" }),
       ReaderModeDefault({ enabled: true }),
+      // 实验分支：正文标题折叠（前端侧方案），验证后再决定是否合入 v5
+      HeadingFold(),
     ],
   },
   // header 插槽追加 Banner
