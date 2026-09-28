@@ -5,20 +5,25 @@ import path from "path"
 import { glob } from "../../util/glob"
 
 /**
- * ProjectImages —— 把项目根目录的 `img/` 复制到构建产物的 `img/`
+ * ProjectImages —— 把仓库根目录的 `img/` 复制到构建产物的 `img/`
  * ----------------------------------------------------------------------------
  * 为什么不用 quartz/static/：
- *   Quartz 的构建流程会清空 quartz/static/ 中以插件名命名的目录，
- *   放在那里的自定义图片会在下次构建时被删除。因此单列一个 emitter，
- *   从项目根的 img/ 读取，直接写入 output/img/。
+ *   Quartz 的 Static emitter 只认 quartz/static/，且输出带 static/ 前缀。
+ *   项目自有图片（如 banner 默认图）希望 URL 干净（/img/...），故单列 emitter。
+ *
+ * 为什么必须读仓库内（process.cwd()/img）而不是仓库外的上级目录：
+ *   本地构建 cwd = D:/website/quartz，上级是 D:/website（碰巧有 img/）；
+ *   但 Cloudflare 干净构建时 cwd = CI 里的仓库根，上级目录是空的——
+ *   曾因此导致线上 /img/banner_1.jpg 404、子页面 banner 空白。
+ *   站点依赖的一切资源必须进 git 仓库，路径必须以 cwd（仓库根）为基准。
  *
  * 最终访问路径：/img/banner_1.jpg
  */
 export const ProjectImages: QuartzEmitterPlugin = () => ({
   name: "ProjectImages",
   async *emit({ argv }) {
-    // 项目根目录（process.cwd() 即 quartz/ 的上级）
-    const projectRoot = path.resolve(process.cwd(), "..")
+    // 仓库根目录 = 构建工作目录（本地与 Cloudflare CI 一致）
+    const projectRoot = process.cwd()
     const srcDir = path.join(projectRoot, "img")
 
     if (!fs.existsSync(srcDir)) return
