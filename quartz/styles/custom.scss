@@ -35,6 +35,16 @@ article {
     margin-bottom: 0.45rem;
   }
 
+  // 标题字号分级：h3 收敛到 1.3rem、h4 收敛到 1.15rem，
+  // 拉近与正文的层级差，长文阅读更平稳
+  h3 {
+    font-size: 1.3rem;
+  }
+
+  h4 {
+    font-size: 1.15rem;
+  }
+
   // 列表项间距，避免中文挤在一起
   li {
     margin-top: 0.35rem;

@@ -7,6 +7,7 @@ import { bannerTransform } from "./quartz/components/bannerTransform"
 // 【2026-09-29】按需求隐藏「最近的笔记」模块，代码保留，取消下面三处注释即可恢复
 // import CollapsibleRecentNotes from "./quartz/components/CollapsibleRecentNotes"
 import HeadingFold from "./quartz/components/HeadingFold"
+import MusicPlayer from "./quartz/components/MusicPlayer"
 import ReaderModeDefault from "./quartz/components/ReaderModeDefault"
 
 // ============================================================================
@@ -45,16 +46,24 @@ const TopBanner = Banner({
 //   },
 // })
 
+// 背景音乐播放器（左下角悬浮按钮 + 展开卡）
+// 音频文件放 quartz/static/music/ 下，在此登记曲目即可（title 显示名 / src 站点路径）
+const BgmPlayer = MusicPlayer({
+  tracks: [{ title: "英雄序章", src: "/static/music/hero-prologue.mp3" }],
+})
+
 registerLayoutOverrides({
   defaults: {
     // afterBody 追加组件（与 YAML 合并，非替换）
     //   - AiChat：右下角浮动问答
     //   - ReaderModeDefault：无 DOM，仅注入「阅读模式默认开启」脚本
+    //   - BgmPlayer：左下角背景音乐播放器
     afterBody: [
       AiChat({ apiEndpoint: "/api/ask" }),
       ReaderModeDefault({ enabled: true }),
       // 实验分支：正文标题折叠（前端侧方案），验证后再决定是否合入 v5
       HeadingFold(),
+      BgmPlayer,
     ],
   },
   // header 插槽追加 Banner
