@@ -58,9 +58,11 @@ article .callout > .callout-content > :first-child {
   margin-top: 0;
 }
 
-// quote 标注框与 Obsidian 一致：无底色（默认继承的淡蓝底与引用语气不符）
+// quote 标注框与 Obsidian 一致：无底色（默认继承的淡蓝底与引用语气不符）；
+// 边框跟随标题色（金色半透明，与其他类型标注框的「边框=标题色」规则一致）
 article .callout[data-callout="quote"] {
   --bg: transparent;
+  --border: color-mix(in srgb, var(--secondary) 27%, transparent);
 }
 
 /* ============ 折叠段落（vault 中大量使用）============ */
