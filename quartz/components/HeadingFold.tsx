@@ -201,7 +201,12 @@ article :is(h4, h5, h6).hf-heading + .hf-body > .hf-inner {
         h.classList.add("hf-heading");
         var chev = makeChevron();
         if (chev) h.insertBefore(chev, h.firstChild);
-        h.setAttribute("aria-expanded", "true");
+
+        // 默认折叠：仅 h3 初始收起（h1/h2/h4/h5/h6 保持展开——
+        // h3 是主要章节分隔，折叠收益最大；h4 级内容少，再折叠会点两次才见内容）
+        var collapsedByDefault = lv === 3;
+        h.setAttribute("aria-expanded", collapsedByDefault ? "false" : "true");
+        if (collapsedByDefault) body.classList.add("collapsed");
 
         // 整行可点：排除链接等交互元素；拖选文字松开不触发
         h.addEventListener(
