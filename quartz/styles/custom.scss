@@ -655,6 +655,25 @@ html {
     width: 64px;
     height: 64px;
   }
+
+  // 主页空容器（高 0）：LOGO 64px 中线压 banner 底边 ⇒ LOGO 底 = banner底 + 32px
+  [data-slug="index"] .breadcrumb-container {
+    margin-top: 2rem;
+  }
+}
+
+// 主页（index）：面包屑容器仅作 LOGO 锚点，不显示 "Home" 文字（config 已放开 index 渲染）。
+// 容器内文字全部隐藏后高度为 0 ⇒ 容器底 = 容器顶 = banner底 + margin-top，
+// LOGO（bottom:0）底边随容器底 ⇒ margin-top: 50px 使 LOGO 中线（容器底 - 50px）
+// 与桌面文章页一致地压在 banner 底边上。
+[data-slug="index"] {
+  .breadcrumb-element {
+    display: none;
+  }
+
+  .breadcrumb-container {
+    margin-top: 3.125rem; // 50px
+  }
 }
 
 /* ============ 响应式 ============ */

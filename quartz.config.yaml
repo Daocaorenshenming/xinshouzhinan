@@ -195,7 +195,8 @@ plugins:
     layout:
       position: beforeBody
       priority: 5
-      condition: not-index
+      # 不设 condition（原为 not-index）：主页需要面包屑容器作为 LOGO 锚点；
+      # 主页容器内的 "Home" 文字由 custom.scss 的 [data-slug="index"] 规则隐藏
   - source: "@quartz-community/comments"
     enabled: false
     options:
