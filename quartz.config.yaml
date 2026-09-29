@@ -20,7 +20,7 @@ configuration:
       code: "JetBrains Mono"
     colors:
       lightMode:
-        light: "#fdfdfd"
+        light: "#f9f6f1"
         lightgray: "#e8e8ea"
         gray: "#a0a0a8"
         darkgray: "#3f3f46"

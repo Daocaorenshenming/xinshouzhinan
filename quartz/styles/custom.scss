@@ -448,6 +448,53 @@ html {
   display: none !important;
 }
 
+/* ============ 侧栏区块标题对齐文章 h2（2026-09-29 本地试验）============ */
+// 需求：左栏「探索」、右栏「目录」「关系图谱」的标题观感与正文 h2 一致。
+// 实测原状：
+//   探索     —— explorer > button.title-button > h2，被压到 1rem
+//   目录     —— toc > .toc-header > h3，1rem / 700
+//   关系图谱 —— graph > h3，1rem / 700
+// 文章 h2 基准：1.4rem / 700 / --dark / headerFont / letter-spacing 0。
+// 注意：右栏还有 backlinks 的 h3「反向链接」，用户未要求改，故不命中。
+.left.sidebar .explorer .title-button > h2,
+.right.sidebar .graph > h3,
+.right.sidebar .toc .toc-header > h3 {
+  font-family: var(--headerFont);
+  font-size: 1.4rem;
+  font-weight: $boldWeight;
+  letter-spacing: 0;
+  line-height: 1.4;
+  color: var(--dark);
+  margin: 0;
+}
+
+/* 「探索」列表条目字号统一（原文件夹标题 0.95rem 与文件条目 1rem 不齐） */
+.left.sidebar .explorer .folder-title,
+.left.sidebar .explorer .nav-file-title,
+.left.sidebar .explorer .nav-folder-title {
+  font-size: 1rem;
+}
+
+/* 「探索」「目录」列表条目不加粗（原 600 → 400，颜色保持各自不变） */
+.left.sidebar .explorer .folder-title,
+.left.sidebar .explorer .nav-file-title,
+.left.sidebar .explorer .nav-folder-title,
+.right.sidebar .toc a {
+  font-weight: $normalWeight;
+}
+
+/* 「探索」「目录」折叠态容器高度：
+   官方折叠态把容器钉死（探索 flex-basis 1.2rem=19.2px、目录 1.4rem=22.4px），
+   是按 1rem 标题设计的；标题升到 1.4rem（31.4px）后折叠即被 overflow:hidden
+   裁掉下半截。桌面端把 basis 放宽到 2.5rem（40px = 标题 31.4px + 余量）。
+   ⚠️ 只在桌面生效：移动端侧栏是横向 flex，改 basis 会变成钉宽度。 */
+@media all and ($desktop) {
+  .left.sidebar .explorer.collapsed,
+  .right.sidebar .toc:has(.toc-header.collapsed) {
+    flex: 0 0 2.5rem;
+  }
+}
+
 /* ============ 左侧栏「最近的笔记」（可折叠 + 标题对齐「探索」）============ */
 // 标题要与「探索」完全一致。实测两者差异：
 //            探索(h2)        最近的笔记(h3, 原)
@@ -560,6 +607,53 @@ html {
         display: none;
       }
     }
+  }
+}
+
+/* ============ 面包屑 LOGO（2026-09-29 本地试验）============ */
+// 需求：100×100 站徽 LOGO 悬浮于 banner 左下角——垂直中线恰好压在 banner
+// 底边上（一半在 banner 内、一半在外）；面包屑在 LOGO 右侧、与 LOGO 底边对齐。
+//
+// 实现：LOGO 从文档流抽出，挂在面包屑容器上绝对定位——
+//   - 水平：left:0 天然与内容列左缘对齐（面包屑同列，响应式免计算）；
+//   - 垂直：bottom:0 使 LOGO 底 = 面包屑容器底（「面包屑与 LOGO 底对齐」），
+//     再用容器上方 margin 校准，使 LOGO 中线（容器底 - 50px）落在 banner 底边；
+//   - 面包屑文字用 padding-left 让位（100px LOGO + 8px 边距）。
+// 资源：仓库根 img/logo.png（与 banner 同 projectImages 机制，URL /img/logo.png）。
+.breadcrumb-container {
+  position: relative;
+  // 垂直校准（实测）：容器自带 margin-top 0.75rem（12px），本值覆盖它。
+  // 目标：容器顶 = banner底 + 26px ⇒ 容器底 = banner底 + 50px
+  // ⇒ LOGO（底=容器底，高100）中线 = banner 底边（实测 banner 底 300 / 容器顶 326）
+  margin-top: 1.625rem;
+  padding-left: 6.75rem; // 108px = LOGO 100px + 边距 8px
+}
+
+.breadcrumb-container::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0; // 底边与面包屑文字底对齐
+  width: 100px;
+  height: 100px;
+  background: url("/img/logo.png") center / contain no-repeat;
+  // 透明底白徽章在米白背景上对比过低（夜间深背景反而清晰）：
+  // 双层 drop-shadow 沿 PNG alpha 轮廓勾边，浅色背景下恢复立体可辨，
+  // 不改动素材本身；夜间模式投影几乎不可见，无副作用。
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.45)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  // 悬浮于 banner 之上（banner 内部最高层级 z-index:1）
+  z-index: 5;
+}
+
+// 移动端：LOGO 缩到 64px，避免过度挤压长面包屑
+@media all and (max-width: 800px) {
+  .breadcrumb-container {
+    padding-left: 4.5rem; // 72px = 64px + 8px
+  }
+
+  .breadcrumb-container::before {
+    width: 64px;
+    height: 64px;
   }
 }
 

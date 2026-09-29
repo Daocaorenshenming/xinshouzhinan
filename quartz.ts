@@ -4,7 +4,8 @@ import { registerSiteTreeTransforms } from "./quartz/plugins/loader/tree-transfo
 import AiChat from "./quartz/components/AiChat"
 import Banner from "./quartz/components/Banner"
 import { bannerTransform } from "./quartz/components/bannerTransform"
-import CollapsibleRecentNotes from "./quartz/components/CollapsibleRecentNotes"
+// 【2026-09-29】按需求隐藏「最近的笔记」模块，代码保留，取消下面三处注释即可恢复
+// import CollapsibleRecentNotes from "./quartz/components/CollapsibleRecentNotes"
 import HeadingFold from "./quartz/components/HeadingFold"
 import ReaderModeDefault from "./quartz/components/ReaderModeDefault"
 
@@ -18,7 +19,7 @@ import ReaderModeDefault from "./quartz/components/ReaderModeDefault"
 // 这样升级 Quartz 默认配置时也不会覆盖我们的改动。
 //
 // 最终结构（桌面端三栏）：
-//   left   探索 + 搜索/工具条 + 可折叠的「最近的笔记」
+//   left   探索 + 搜索/工具条（「最近的笔记」已停用，代码保留）
 //   header 顶部全宽 Banner（高 300px，通栏，宽度自适应）
 //   right  目录 + 知识图谱 + 反向链接
 //   afterBody AI 问答浮动组件
@@ -34,15 +35,15 @@ const TopBanner = Banner({
 
 // 可折叠的「最近的笔记」：折叠外壳 + 官方组件渲染列表
 // 标题样式与「探索」对齐（1rem / 700 / --dark），详见 custom.scss
-const RecentNotesPanel = CollapsibleRecentNotes({
-  title: "最近的笔记",
-  collapsed: true,
-  recentNotesOptions: {
-    limit: 5,
-    showTags: false,
-    linkToMore: false,
-  },
-})
+// const RecentNotesPanel = CollapsibleRecentNotes({
+//   title: "最近的笔记",
+//   collapsed: true,
+//   recentNotesOptions: {
+//     limit: 5,
+//     showTags: false,
+//     linkToMore: false,
+//   },
+// })
 
 registerLayoutOverrides({
   defaults: {
@@ -58,8 +59,8 @@ registerLayoutOverrides({
   },
   // header 插槽追加 Banner
   appendHeader: [TopBanner],
-  // left 插槽：「最近的笔记」置底
-  appendLeft: [RecentNotesPanel],
+  // left 插槽：「最近的笔记」置底（2026-09-29 起停用，代码保留）
+  // appendLeft: [RecentNotesPanel],
 })
 
 // 站点级 TreeTransform：在 Obsidian 嵌入展开后提取文章头图，供 Banner 使用
