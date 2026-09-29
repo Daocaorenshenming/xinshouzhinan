@@ -47,6 +47,22 @@ article {
   }
 }
 
+/* ============ 标注框（callout）间距微调 ============ */
+// 标题与正文间距收敛到与正文段落一致（0.9rem）：
+// 原「标题 padding-bottom 1rem + 首元素 margin-top 0.9rem」叠加出 30px 的空档
+article .callout > .callout-title {
+  padding-bottom: 0.9rem;
+}
+// 首元素 margin-top 归零（callouts.scss 层内的重置被 article p 压掉，这里层外生效）
+article .callout > .callout-content > :first-child {
+  margin-top: 0;
+}
+
+// quote 标注框与 Obsidian 一致：无底色（默认继承的淡蓝底与引用语气不符）
+article .callout[data-callout="quote"] {
+  --bg: transparent;
+}
+
 /* ============ 折叠段落（vault 中大量使用）============ */
 details {
   border: 1px solid var(--lightgray);
