@@ -56,11 +56,13 @@ registerLayoutOverrides({
   defaults: {
     // afterBody 追加组件（与 YAML 合并，非替换）
     //   - AiChat：右下角浮动问答
-    //   - ReaderModeDefault：无 DOM，仅注入「阅读模式默认开启」脚本
+    //   - ReaderModeDefault：无 DOM，仅注入「阅读模式默认值」脚本
+    //     【2026-09-30】默认改为关闭（enabled: false）：两侧边栏默认可见；
+    //     用户手动切换阅读模式仍会记录到 localStorage，尊重个人偏好
     //   - BgmPlayer：左下角背景音乐播放器
     afterBody: [
       AiChat({ apiEndpoint: "/api/ask" }),
-      ReaderModeDefault({ enabled: true }),
+      ReaderModeDefault({ enabled: false }),
       // 实验分支：正文标题折叠（前端侧方案），验证后再决定是否合入 v5
       HeadingFold(),
       BgmPlayer,

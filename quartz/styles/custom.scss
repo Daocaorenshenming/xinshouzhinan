@@ -6,7 +6,7 @@
 // 内容区最大宽度，与 base.scss 的 `.page { max-width: desktop(1200px) + 300px }`
 // 保持一致（1500px）。侧栏居中定位需要用它换算「外侧空白区」宽度。
 $contentMax: 1500px;
-// 侧栏宽度，与 sidebar-fixed-metrics 的 width 及 grid 占位列一致。
+// 侧栏宽度，与 sidebar-follow-metrics 的 width 及 grid 占位列一致。
 $sidebarWidth: 320px;
 
 /* ============ 中文排版优化 ============ */
@@ -250,18 +250,21 @@ article img.banner-lifted-image {
   display: none;
 }
 
-/* ============ 左右侧栏：banner 下方 + 不随正文滚动 + 恒定贴窗口边缘 ============ */
-// 目标：
-//   1) banner 下方 —— 侧栏起点是 300px（banner 高度），而不是 top: 0
-//   2) 不随滚动  —— 从 sticky 改为 fixed，脱离文档流，滚动时原地不动
-//   3) 恒定贴边  —— 左侧栏永远贴住窗口最左侧（left: 0），
-//                    右侧栏永远贴住窗口最右侧（right: 0）；
-//                    宽度固定 320px，垂直位置（top / height）不随视口变化。
+/* ============ 左右侧栏：banner 下方起始 + 滚动跟随 + 到顶吸附 ============ */
+// 目标（2026-09-30 定稿）：
+//   1) 初始位置不变 —— 侧栏起点在 banner 下沿（视觉 top 300px），与原 fixed 一致
+//   2) 滚动跟随    —— 页面滚动时侧栏跟随上滚（top 视觉值 300 → 0）
+//   3) 到顶吸附    —— 滚过 banner 高度（300px）后贴视口顶停止，正文继续滚动
 //
-// 关键点：侧栏由 CSS Grid 的 grid-sidebar-left / grid-sidebar-right 占位，
-// 一旦改成 position: fixed 就脱离文档流，导致 grid 的两列塌陷成 0 宽、
-// 中间正文列被撑到 max-width 上限（视觉上正文跑到屏幕最左边）。
-// 因此必须同时用 grid-template-columns 把左右两列重新钉回 320px。
+// 实现：fixed + CSS 滚动驱动动画（scroll-driven animation）。
+//   ⚠️ 曾尝试 position: sticky 方案：sticky 元素回到文档流后，其高度
+//   （需 ≥ 100vh+300px）会撑大 grid 行高 —— 长页面看不出（正文更高），
+//   短页面（如 2.5 装备概念）页面底部出现 ~300px 假滚动空间、页脚悬空，
+//   观感即「banner 错位」。fixed 脱离文档流则完全不受行高影响，
+//   原有的 grid 钉列/占位补丁体系继续有效。
+//   「跟随→吸附」改由 scroll() 时间线驱动 translateY(300px→0) 完成：
+//   transform 只走合成层，零布局开销；不支持该特性的浏览器自动降级为
+//   恒定 translateY(300px)，即原有 fixed 固定行为。
 //
 // ⚠️ 历史教训（避免再次走弯路）：
 //   曾把需求理解为「侧栏向外移开、腾空间给正文」，用 $sidebarOutward / shift
@@ -272,14 +275,27 @@ article img.banner-lifted-image {
 //
 // 侧栏宽度保持 320px，与 grid 占位列同宽，正文不会被遮挡。
 
-@mixin sidebar-fixed-metrics {
-  // 与 banner 通栏同高，侧栏从 banner 下沿开始（垂直位置恒定，不随视口变化）
-  top: var(--sidebar-top, 300px);
-  height: calc(100vh - var(--sidebar-top, 300px));
-  // ⚠️ fixed 元素不受 grid 列宽约束，会按内容收缩/撑开
-  // （实测左栏被最近笔记的长标题撑到 367px、右栏缩到 198px），
-  // 必须显式钉回 320px，与 grid-template-columns 一致，
-  // 否则会压到正文或左右不对称。
+@keyframes sidebar-follow {
+  from {
+    transform: translateY(300px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@mixin sidebar-follow-metrics {
+  top: 0;
+  height: 100vh;
+  // 滚动 0~300px（banner 高度）区间内 translateY 线性归零：
+  //   初始 —— 视觉 top = 300px（banner 下方，与原 fixed 完全一致）
+  //   跟随 —— 滚动中 translateY 递减，侧栏视觉上移跟随
+  //   吸附 —— 滚过 300px 后恒为 0，侧栏贴视口顶停止
+  // height 100vh：初始底部 300px 藏在视口外，吸附后恰好占满整屏。
+  transform: translateY(300px);
+  animation: sidebar-follow linear both;
+  animation-timeline: scroll(root block);
+  animation-range: 0 300px;
   width: 320px;
   padding: 1.5rem 0 2rem 0;
   box-sizing: border-box;
@@ -344,9 +360,11 @@ article img.banner-lifted-image {
   }
 
   .page > #quartz-body > .sidebar {
+    // fixed + scroll() 时间线驱动 translateY：初始视觉在 banner 下方，
+    // 滚动时跟随上移，滚过 banner 高度后贴视口顶吸附（见上方 mixin 注释）。
     position: fixed;
     z-index: 20;
-    @include sidebar-fixed-metrics;
+    @include sidebar-follow-metrics;
   }
 
   // ═══════════════════════════════════════════════════════════════
