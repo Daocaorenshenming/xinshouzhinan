@@ -45,6 +45,13 @@ article {
     font-size: 1.15rem;
   }
 
+  // h5（#####，多出现在列表项内作子标题）：字号与正文一致（1rem）+ 加粗，
+  // 靠字重而非字号区分层级；默认折叠由 HeadingFold 处理
+  h5 {
+    font-size: 1rem;
+    font-weight: $boldWeight;
+  }
+
   // 列表项间距，避免中文挤在一起
   li {
     margin-top: 0.35rem;

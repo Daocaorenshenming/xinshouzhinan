@@ -7,6 +7,7 @@ import { bannerTransform } from "./quartz/components/bannerTransform"
 // 【2026-09-29】按需求隐藏「最近的笔记」模块，代码保留，取消下面三处注释即可恢复
 // import CollapsibleRecentNotes from "./quartz/components/CollapsibleRecentNotes"
 import HeadingFold from "./quartz/components/HeadingFold"
+import ImageLightbox from "./quartz/components/ImageLightbox"
 import MusicPlayer from "./quartz/components/MusicPlayer"
 import ReaderModeDefault from "./quartz/components/ReaderModeDefault"
 
@@ -60,11 +61,14 @@ registerLayoutOverrides({
     //     【2026-09-30】默认改为关闭（enabled: false）：两侧边栏默认可见；
     //     用户手动切换阅读模式仍会记录到 localStorage，尊重个人偏好
     //   - BgmPlayer：左下角背景音乐播放器
+    //   - ImageLightbox：正文图片点击全屏放大（自研轻量灯箱，支持多图左右切换、
+    //     点击遮罩/ESC/滚动/下滑关闭；灯箱外壳挂 body 直属，SPA 换页不销毁）
     afterBody: [
       AiChat({ apiEndpoint: "/api/ask" }),
       ReaderModeDefault({ enabled: false }),
       // 实验分支：正文标题折叠（前端侧方案），验证后再决定是否合入 v5
       HeadingFold(),
+      ImageLightbox(),
       BgmPlayer,
     ],
   },

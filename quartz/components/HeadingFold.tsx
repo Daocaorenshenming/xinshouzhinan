@@ -9,9 +9,12 @@ import { QuartzComponent, QuartzComponentConstructor } from "./types"
  *   本组件在前端给全站文章标题注入折叠能力，写作侧零改动。
  *
  * 实现方式（前端侧，非构建期转换）：
- *   DOM 就绪后扫描内容根容器的直接子级标题（h1~h6，排除文章主标题），
+ *   DOM 就绪后扫描文章内容根内的**全部标题**（h1~h6，含列表项内的嵌套标题，
+ *   如 `- ##### 子标题` 渲染出的 li > h5），排除文章主标题，
  *   把「标题之后到下一个同级/更高级标题」的兄弟节点包进 grid 动画外壳，
  *   并在标题前注入与「探索」一致的 chevron 箭头；点击标题切换折叠。
+ *
+ * 默认折叠级别：h3（章节分隔）与 h5（列表项内的子标题，如资料片介绍）。
  *
  * 边界与保护：
  *   - 排除 .article-title（文章主标题，折叠整篇无意义）
@@ -165,9 +168,9 @@ article :is(h4, h5, h6).hf-heading + .hf-body > .hf-inner {
       controllers.set(article, ctl);
       var signal = ctl.signal;
 
-      var headings = root.querySelectorAll(
-        ":scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > h5, :scope > h6"
-      );
+      // 文章内全部标题（含列表项内的嵌套标题，如 li 内的 h5）——
+      // 折叠范围用 nextElementSibling 收集，嵌套标题自然只影响其所在容器内的兄弟节点
+      var headings = root.querySelectorAll("h1, h2, h3, h4, h5, h6");
 
       for (var j = 0; j < headings.length; j++) {
         var h = headings[j];
@@ -202,9 +205,9 @@ article :is(h4, h5, h6).hf-heading + .hf-body > .hf-inner {
         var chev = makeChevron();
         if (chev) h.insertBefore(chev, h.firstChild);
 
-        // 默认折叠：仅 h3 初始收起（h1/h2/h4/h5/h6 保持展开——
-        // h3 是主要章节分隔，折叠收益最大；h4 级内容少，再折叠会点两次才见内容）
-        var collapsedByDefault = lv === 3;
+        // 默认折叠：h3（主要章节分隔，折叠收益最大）与
+        // h5（多出现在列表项内作子标题，如各资料片介绍，默认收起便于扫读）
+        var collapsedByDefault = lv === 3 || lv === 5;
         h.setAttribute("aria-expanded", collapsedByDefault ? "false" : "true");
         if (collapsedByDefault) body.classList.add("collapsed");
 
