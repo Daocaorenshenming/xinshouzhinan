@@ -322,7 +322,9 @@ function findPluginByPackageName(packageName: string): string | null {
  */
 function trySymlink(target: string, linkPath: string): void {
   try {
-    fs.symlinkSync(target, linkPath, "dir")
+    // Windows: 目录 symlink 需要管理员权限/开发者模式（普通用户报 EPERM），
+    // 改用 junction —— 语义等价、无需特权，Node 同样识别为 symbolic link
+    fs.symlinkSync(target, linkPath, process.platform === "win32" ? "junction" : "dir")
   } catch (err: unknown) {
     if ((err as NodeJS.ErrnoException).code === "EEXIST") return
     throw err
@@ -473,7 +475,9 @@ export async function installPlugin(
       console.log(styleText("cyan", `→`), `Linking ${spec.name} from ${spec.repo}...`)
     }
 
-    fs.symlinkSync(spec.repo, pluginDir, "dir")
+    // 本地插件链接：Windows 用 junction（普通权限即可创建，无需开发者模式），
+    // 其他平台用目录 symlink。spec.repo 已在 parsePluginSource 中绝对化。
+    fs.symlinkSync(spec.repo, pluginDir, process.platform === "win32" ? "junction" : "dir")
 
     if (options.verbose) {
       console.log(styleText("green", `✓`), `Linked ${spec.name}`)
